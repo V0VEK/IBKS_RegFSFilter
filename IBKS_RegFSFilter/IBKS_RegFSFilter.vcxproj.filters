@@ -36,6 +36,9 @@
     <ClCompile Include="ConfigParser.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="IBKS_RegFSFilter.rc">
@@ -53,6 +56,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConfigParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

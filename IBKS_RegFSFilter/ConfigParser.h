@@ -1,9 +1,25 @@
 #pragma once
 #include <fltKernel.h>
-#include"Logger.h"
+#include <ntstrsafe.h>
 
-#define PROTECTED_REGKEYS_REG_PATH ""
-#define PROTECTED_FILES_REG_PATH ""
+#include "Logger.h"
+#include "Common.h"
+
+#define REG_PATH_FOR_ANTIVIRUS (L"\\REGISTRY\\MACHINE\\SOFTWARE\\IBKS_AV")
+#define PROTECTED_FILES_REG_PATH (L"ProtectedFiles")
+#define PROTECTED_REG_KEYS_REG_PATH (L"ProtectedRegKeys")
+
+typedef struct protectedEntity {
+	UNICODE_STRING path;
+	struct protectedEntity* Next;
+} protectedEntity;
+
+protectedEntity* g_FS_Entities;
+protectedEntity* g_Registry_Entities;
+
+UNICODE_STRING g_hardcodedStrForFS;
+UNICODE_STRING g_hardcodedStrForRegistry;
 
 
-NTSTATUS ReadProtectedEntitiesList(PUNICODE_STRING regPath);
+NTSTATUS ReadProtectedEntitiesList();
+NTSTATUS FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STRING data);

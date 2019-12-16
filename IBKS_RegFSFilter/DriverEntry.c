@@ -56,13 +56,9 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT p_driver_object, PUNICODE_STRING p_registry_
 
 	DEBUG_PRINT("FS filter and registry filter currently running");
 
-	DEBUG_PRINT("Start reading protected entities list in registry key: %wZ", p_registry_path);
-	status = ReadProtectedEntitiesList(p_registry_path);
-	if (!NT_SUCCESS(status)) {
-		DEBUG_PRINT("Registry key reading error");
-		Clean();
-		return -1;
-	}
+	DEBUG_PRINT("Start reading protected entities list in registry key: %wZ", REG_PATH_FOR_ANTIVIRUS);
+
+	status = ReadProtectedEntitiesList();
 
 
 	DEBUG_PRINT("Driver successfuly loaded!");
