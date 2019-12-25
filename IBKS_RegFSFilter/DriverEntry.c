@@ -32,6 +32,8 @@ VOID DriverUnload(PDRIVER_OBJECT p_driver_object)
 		DEBUG_PRINT("Registry filter stop failure");
 	}
 
+	DeleteProtectedEntitiesList();
+
 	DEBUG_PRINT("STOP");
 }
 

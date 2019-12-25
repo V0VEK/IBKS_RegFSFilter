@@ -33,7 +33,8 @@ NTSTATUS RtlQueryRegistryRoutine(
 	if (RtlEqualUnicodeString(&valueName, &g_hardcodedStrForFS, TRUE)) {
 		DEBUG_PRINT("Fill list for filesystem");
 
-		status = FillListOfProtectedEntities(g_FS_Entities, &valueData);
+		g_FS_Entities = NULL;
+		g_FS_Entities = FillListOfProtectedEntities(g_FS_Entities, &valueData);
 		if (status != STATUS_SUCCESS) {
 			return status;
 		}
@@ -41,7 +42,9 @@ NTSTATUS RtlQueryRegistryRoutine(
 
 	if (RtlEqualUnicodeString(&valueName, &g_hardcodedStrForRegistry, TRUE)) {
 		DEBUG_PRINT("Fill list for registry");
-		status = FillListOfProtectedEntities(g_Registry_Entities, &valueData);
+
+		g_Registry_Entities = NULL;
+		g_Registry_Entities = FillListOfProtectedEntities(g_Registry_Entities, &valueData);
 		if (status != STATUS_SUCCESS) {
 			return status;
 		}
@@ -51,57 +54,51 @@ NTSTATUS RtlQueryRegistryRoutine(
 }
 
 
-NTSTATUS FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STRING data) {
-	protectedEntity* node = list;
-	protectedEntity* tmp = node;
+protectedEntity* AddPathToList(protectedEntity* list, UNICODE_STRING str) {
+	protectedEntity* newElem = CreateBuffer(sizeof(protectedEntity));
+	if (newElem == NULL) {
+		return NULL;
+	}
+	newElem->path = str;
+	newElem->Next = list;
+	return newElem;
+}
 
-	tmp = CreateBuffer(sizeof(protectedEntity));
-	if (tmp == NULL) {
-		return -1;
+
+protectedEntity* FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STRING data) {
+	if (data->Buffer[0] == L'\0') {
+		return NULL;
 	}
 	
-	// Calculate all length of entities
-	USHORT curEntityLength = 0;
-	for (int i = 0; i < data->Length; i++) {
-		curEntityLength++;
-		if (data->Buffer[i] == L';') {
-			tmp->path.Length = curEntityLength;
-			tmp->path.MaximumLength = curEntityLength;
-
-			node->Next = tmp;
-			node = node->Next;
-
-			tmp = CreateBuffer(sizeof(protectedEntity));
-			if (tmp == NULL) {
-				return -1;
-			}
-		}
-	}
-
-	// Fill list with entities
-	node = list;
-	WCHAR* str = CreateBuffer(node->path.Length * sizeof(WCHAR));
-	if (str == NULL) {
-		return -1;
-	}
+	int i = 0;
 	int bufferCtr = 0;
+	protectedEntity* firstElem = list;
+	WCHAR buffer[MAX_BUFF_SIZE];
+	RtlZeroMemory(buffer, MAX_BUFF_SIZE * sizeof(WCHAR));
 
-	for (int i = 0; i < data->Length; i++) {
-		str[bufferCtr++] = data->Buffer[i];
+	while (data->Buffer[i] != 0) {
+		buffer[bufferCtr] = data->Buffer[i];
+		bufferCtr++;
 		if (data->Buffer[i] == L';') {
-			str[bufferCtr - 1] = L'\0';
-			RtlInitUnicodeString(&node->path, str);
-			str = CreateBuffer(node->path.Length * sizeof(WCHAR));
-			if (str == NULL) {
-				return -1;
+			buffer[bufferCtr - 1] = L'\0';
+			UNICODE_STRING str;
+			ANSI_STRING AS;
+			RtlInitAnsiStringEx(&AS, buffer);
+			RtlAnsiStringToUnicodeString(&str, buffer, TRUE);
+			firstElem = AddPathToList(firstElem, str);
+			DEBUG_PRINT("Added: %wZ", firstElem->path);
+			if (firstElem == NULL) {
+				return NULL;
 			}
-			DEBUG_PRINT("Written buffer: %wZ", node->path);
 
-			node = node->Next;
+			RtlZeroMemory(buffer, MAX_BUFF_SIZE * sizeof(WCHAR));
 			bufferCtr = 0;
 		}
+		i++;
 	}
-	return STATUS_SUCCESS;
+	DEBUG_PRINT("CHECK: %wZ", firstElem->path);
+	DEBUG_PRINT("CHECK2: %wZ", firstElem->Next->path);
+	return firstElem;
 }
 
 
@@ -124,16 +121,6 @@ NTSTATUS ReadProtectedEntitiesList() {
 
 	DEBUG_PRINT("Reg key for Registry: %wZ", g_hardcodedStrForRegistry);
 
-	g_FS_Entities = CreateBuffer(sizeof(protectedEntity));
-	if (g_FS_Entities == NULL) {
-		return -1;
-	}
-
-	g_Registry_Entities = CreateBuffer(sizeof(protectedEntity));
-	if (g_Registry_Entities == NULL) {
-		return -1;
-	}
-
 
 	RTL_QUERY_REGISTRY_TABLE paramTable[] = {
 		//RtlQueryRegistry routine	       Flag 			  Name  Context Default type
@@ -149,4 +136,32 @@ NTSTATUS ReadProtectedEntitiesList() {
 
 
 	return STATUS_SUCCESS;
+}
+
+
+VOID DeleteList(protectedEntity* list) {
+	protectedEntity* node = list;
+	protectedEntity* tmp;
+
+	while (node->Next != NULL) {
+		tmp = node;
+		node = node->Next;
+		DEBUG_PRINT("Need to delete: %wZ", tmp->path);
+		//ExFreePoolWithTag(tmp->path.Buffer, '1gaT');
+
+	}
+
+	DEBUG_PRINT("Need to delete: %wZ", node->path);
+	//ExFreePoolWithTag(node->path.Buffer, '1gaT');
+}
+
+
+VOID DeleteProtectedEntitiesList() {
+	DeleteList(g_FS_Entities);
+	DeleteList(g_Registry_Entities);
+	//g_FS_Entities = g_FS_Entities->Next;
+	//ExFreePoolWithTag(tmp->path.Buffer, '1gaT');
+	//ExFreePoolWithTag(tmp, '1gaT');
+	//ExFreePoolWithTag(g_FS_Entities->path.Buffer, '1gaT');
+	//ExFreePoolWithTag(g_FS_Entities, '1gaT');
 }
