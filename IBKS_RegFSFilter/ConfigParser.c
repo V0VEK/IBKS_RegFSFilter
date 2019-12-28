@@ -73,25 +73,24 @@ protectedEntity* FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STR
 	int i = 0;
 	int bufferCtr = 0;
 	protectedEntity* firstElem = list;
-	WCHAR buffer[MAX_BUFF_SIZE];
-	RtlZeroMemory(buffer, MAX_BUFF_SIZE * sizeof(WCHAR));
+	WCHAR* buffer;
+	buffer = CreateBuffer(MAX_BUFF_SIZE * sizeof(WCHAR));
 
 	while (data->Buffer[i] != 0) {
 		buffer[bufferCtr] = data->Buffer[i];
 		bufferCtr++;
 		if (data->Buffer[i] == L';') {
 			buffer[bufferCtr - 1] = L'\0';
+			DEBUG_PRINT("%ws CHEEECK", buffer);
 			UNICODE_STRING str;
-			ANSI_STRING AS;
-			RtlInitAnsiStringEx(&AS, buffer);
-			RtlAnsiStringToUnicodeString(&str, buffer, TRUE);
+			RtlInitUnicodeStringEx(&str, buffer);
 			firstElem = AddPathToList(firstElem, str);
 			DEBUG_PRINT("Added: %wZ", firstElem->path);
 			if (firstElem == NULL) {
 				return NULL;
 			}
 
-			RtlZeroMemory(buffer, MAX_BUFF_SIZE * sizeof(WCHAR));
+			buffer = CreateBuffer(MAX_BUFF_SIZE * sizeof(WCHAR));
 			bufferCtr = 0;
 		}
 		i++;
@@ -147,21 +146,18 @@ VOID DeleteList(protectedEntity* list) {
 		tmp = node;
 		node = node->Next;
 		DEBUG_PRINT("Need to delete: %wZ", tmp->path);
-		//ExFreePoolWithTag(tmp->path.Buffer, '1gaT');
+		ExFreePoolWithTag(tmp->path.Buffer, '1gaT');
+		ExFreePoolWithTag(tmp, '1gaT');
 
 	}
 
 	DEBUG_PRINT("Need to delete: %wZ", node->path);
-	//ExFreePoolWithTag(node->path.Buffer, '1gaT');
+	ExFreePoolWithTag(node->path.Buffer, '1gaT');
+	ExFreePoolWithTag(node, '1gaT');
 }
 
 
 VOID DeleteProtectedEntitiesList() {
 	DeleteList(g_FS_Entities);
 	DeleteList(g_Registry_Entities);
-	//g_FS_Entities = g_FS_Entities->Next;
-	//ExFreePoolWithTag(tmp->path.Buffer, '1gaT');
-	//ExFreePoolWithTag(tmp, '1gaT');
-	//ExFreePoolWithTag(g_FS_Entities->path.Buffer, '1gaT');
-	//ExFreePoolWithTag(g_FS_Entities, '1gaT');
 }
