@@ -19,7 +19,7 @@ NTSTATUS WriteDataToUnicodeString(PUNICODE_STRING dest, PVOID source) {
 }
 
 PVOID CreateBuffer(size_t size) {
-	PVOID buffer = ExAllocatePool(NonPagedPool, size);
+	PVOID buffer = ExAllocatePoolWithTag(NonPagedPool, size, '1gaT');
 	if (buffer == NULL) {
 		return NULL;	// Maybe need to fix
 	}
