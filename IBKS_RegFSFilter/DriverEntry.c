@@ -11,28 +11,22 @@
 DRIVER_INITIALIZE DriverEntry;
 DRIVER_UNLOAD DriverUnload;
 
-// TODO: maybe need fix
-VOID Clean() {
-	FsFilterStop();
-	RegFilterStop();
-}
-
 VOID DriverUnload(PDRIVER_OBJECT p_driver_object)
 {
 	UNREFERENCED_PARAMETER(p_driver_object);
 	PAGED_CODE();
 
-	NTSTATUS status = FsFilterStop();
+	DeleteProtectedEntitiesList();
+	NTSTATUS status;
+	/*NTSTATUS status = FsFilterStop();
 	if (!NT_SUCCESS(status)) {
 		DEBUG_PRINT("FS filter stop failure");
-	}
+	}*/
 
 	status = RegFilterStop();
 	if (!NT_SUCCESS(status)) {
 		DEBUG_PRINT("Registry filter stop failure");
 	}
-
-	DeleteProtectedEntitiesList();
 
 	DEBUG_PRINT("STOP");
 }
@@ -43,25 +37,24 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT p_driver_object, PUNICODE_STRING p_registry_
 	p_driver_object->DriverUnload = DriverUnload;
 	DEBUG_PRINT("IBKS Filter starting...");
 
-	NTSTATUS status = FsFilterStart(p_driver_object);
+
+	DEBUG_PRINT("Start reading protected entities list in registry key: %wZ", REG_PATH_FOR_ANTIVIRUS);
+
+	NTSTATUS status = ReadProtectedEntitiesList();
+
+	status = FsFilterStart(p_driver_object);
 	if (!NT_SUCCESS(status)) {
 		DEBUG_PRINT("FS filter start failure");
-		return -1; // Maybe need fix
+		return status;
 	}
 
 	status = RegFilterStart(p_driver_object);
 	if (!NT_SUCCESS(status)) {
 		DEBUG_PRINT("Registry filter start failure");
-		Clean();
-		return -1; // Maybe need fix
+		return status;
 	}
 
 	DEBUG_PRINT("FS filter and registry filter currently running");
-
-	DEBUG_PRINT("Start reading protected entities list in registry key: %wZ", REG_PATH_FOR_ANTIVIRUS);
-
-	status = ReadProtectedEntitiesList();
-
 
 	DEBUG_PRINT("Driver successfuly loaded!");
 	return STATUS_SUCCESS;
