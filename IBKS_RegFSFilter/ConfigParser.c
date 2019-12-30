@@ -84,7 +84,17 @@ protectedEntity* FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STR
 		return NULL;
 	}
 
+	BOOLEAN diskFlag = FALSE;
+
 	while (data->Buffer[i] != 0) {
+		if (!diskFlag) {
+			while (data->Buffer[i] != '\\' && data->Buffer[i] != 0) {
+				i++;
+			}
+			diskFlag = TRUE;
+			if (data->Buffer[i] == 0)
+				break;
+		}
 		buffer[bufferCtr] = data->Buffer[i];
 		bufferCtr++;
 		if (data->Buffer[i] == L';') {
@@ -101,6 +111,7 @@ protectedEntity* FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STR
 
 			buffer = CreateBuffer(MAX_BUFF_SIZE * sizeof(WCHAR));
 			bufferCtr = 0;
+			diskFlag = FALSE;
 		}
 		i++;
 	}

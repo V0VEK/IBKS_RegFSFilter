@@ -1,5 +1,6 @@
 // Unreferenced formal parameter
-#pragma warning( disable : 4100)
+#pragma warning(disable:4100)
+#pragma warning(disable:6011)
 
 #include <fltKernel.h>
 
@@ -196,9 +197,8 @@ FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
 			}
 			DEBUG_PRINT("Process name: %wZ; File name: %wZ", processName, FileObject->FileName);
 
+            ExFreePoolWithTag(processName.Buffer, MY_POOL_TAG);
 		}
 	}
-
-    //ExFreePoolWithTag(processName.Buffer, MY_POOL_TAG);
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
