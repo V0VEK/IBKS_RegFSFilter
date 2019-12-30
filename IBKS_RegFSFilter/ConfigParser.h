@@ -29,3 +29,5 @@ protectedEntity* FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STR
 VOID DeleteProtectedEntitiesList();
 
 VOID DeleteList(protectedEntity* list);
+
+VOID DumpAllList(protectedEntity* list);

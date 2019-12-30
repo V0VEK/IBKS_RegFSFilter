@@ -6,6 +6,7 @@
 
 RTL_QUERY_REGISTRY_ROUTINE RtlQueryRegistryRoutine;
 
+// This function is called for each registry key that was requested
 NTSTATUS RtlQueryRegistryRoutine(
 	PWSTR ValueName,
 	ULONG ValueType,
@@ -34,6 +35,7 @@ NTSTATUS RtlQueryRegistryRoutine(
 		DEBUG_PRINT("Fill list for filesystem");
 
 		g_FS_Entities = NULL;
+		// Read buffer of registry key string value and fill list of protected files to use this list in real time to protect
 		g_FS_Entities = FillListOfProtectedEntities(g_FS_Entities, &valueData);
 		if (status != STATUS_SUCCESS) {
 			return status;
@@ -44,6 +46,7 @@ NTSTATUS RtlQueryRegistryRoutine(
 		DEBUG_PRINT("Fill list for registry");
 
 		g_Registry_Entities = NULL;
+		// Read buffer of registry key string value and fill list of protected registry keys to use this list in real time to protect
 		g_Registry_Entities = FillListOfProtectedEntities(g_Registry_Entities, &valueData);
 		if (status != STATUS_SUCCESS) {
 			return status;
@@ -73,17 +76,23 @@ protectedEntity* FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STR
 	int i = 0;
 	int bufferCtr = 0;
 	protectedEntity* firstElem = list;
+
 	WCHAR* buffer;
+	// Creates buffer of proper size and zeroes memory
 	buffer = CreateBuffer(MAX_BUFF_SIZE * sizeof(WCHAR));
+	if (buffer == NULL) {
+		return NULL;
+	}
 
 	while (data->Buffer[i] != 0) {
 		buffer[bufferCtr] = data->Buffer[i];
 		bufferCtr++;
 		if (data->Buffer[i] == L';') {
 			buffer[bufferCtr - 1] = L'\0';
-			DEBUG_PRINT("%ws CHEEECK", buffer);
+
 			UNICODE_STRING str;
 			RtlInitUnicodeStringEx(&str, buffer);
+
 			firstElem = AddPathToList(firstElem, str);
 			DEBUG_PRINT("Added: %wZ", firstElem->path);
 			if (firstElem == NULL) {
@@ -95,8 +104,6 @@ protectedEntity* FillListOfProtectedEntities(protectedEntity* list, PUNICODE_STR
 		}
 		i++;
 	}
-	DEBUG_PRINT("CHECK: %wZ", firstElem->path);
-	DEBUG_PRINT("CHECK2: %wZ", firstElem->Next->path);
 	return firstElem;
 }
 
@@ -120,13 +127,14 @@ NTSTATUS ReadProtectedEntitiesList() {
 
 	DEBUG_PRINT("Reg key for Registry: %wZ", g_hardcodedStrForRegistry);
 
-
+	// This is neccessary to read registry key from kernel mode
 	RTL_QUERY_REGISTRY_TABLE paramTable[] = {
 		//RtlQueryRegistry routine	       Flag 			  Name  Context Default type
 		{ RtlQueryRegistryRoutine, RTL_QUERY_REGISTRY_REQUIRED, NULL, NULL, REG_NONE, NULL, 0},
 		{ NULL,							0,					  NULL, NULL,    0,     NULL, 0}
 	};
 
+	// https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlqueryregistryvalues
 	RtlQueryRegistryValues(RTL_REGISTRY_ABSOLUTE,
 							regPath.Buffer,
 							&paramTable[0],
@@ -145,13 +153,12 @@ VOID DeleteList(protectedEntity* list) {
 	while (node->Next != NULL) {
 		tmp = node;
 		node = node->Next;
-		DEBUG_PRINT("Need to delete: %wZ", tmp->path);
+
 		ExFreePoolWithTag(tmp->path.Buffer, '1gaT');
 		ExFreePoolWithTag(tmp, '1gaT');
 
 	}
 
-	DEBUG_PRINT("Need to delete: %wZ", node->path);
 	ExFreePoolWithTag(node->path.Buffer, '1gaT');
 	ExFreePoolWithTag(node, '1gaT');
 }
@@ -160,4 +167,17 @@ VOID DeleteList(protectedEntity* list) {
 VOID DeleteProtectedEntitiesList() {
 	DeleteList(g_FS_Entities);
 	DeleteList(g_Registry_Entities);
+}
+
+
+VOID DumpAllList(protectedEntity* list) {
+	protectedEntity* node = list;
+	int i = 0;
+	while (1) {
+		DEBUG_PRINT("%d. %wZ", i, node->path);
+		i++;
+		node = node->Next;
+		if (node == NULL)
+			break;
+	}
 }
