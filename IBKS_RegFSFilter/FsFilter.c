@@ -19,7 +19,7 @@ FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
 
 // https://docs.microsoft.com/ru-ru/windows-hardware/drivers/ddi/fltkernel/ns-fltkernel-_flt_operation_registration
 const FLT_OPERATION_REGISTRATION fsFilterCallbacks[] = {
-	{IRP_MJ_CREATE, 0, PreFileOperationCallback, NULL},
+	{IRP_MJ_WRITE, 0, PreFileOperationCallback, NULL},
 	{IRP_MJ_OPERATION_END}
 };
 
@@ -163,6 +163,19 @@ NTSTATUS GetProcessImageName(PUNICODE_STRING ProcessImageName)
 }
 
 
+BOOLEAN IsFileProtected(PUNICODE_STRING fileName) {
+    protectedEntity* node = g_FS_Entities;
+    while (node != NULL) {
+        LONG res = RtlCompareUnicodeString(fileName, &node->path, TRUE);
+        if (res == 0) {
+            return TRUE;
+        }
+        node = node->Next;
+    }
+    return FALSE;
+}
+
+
 // https://habr.com/ru/post/176739/
 FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
 	PFLT_CALLBACK_DATA Data,
@@ -181,7 +194,7 @@ FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
 
 	if (FltObjects->FileObject != NULL && Data != NULL) {
 		FileObject = Data->Iopb->TargetFileObject;
-		if (FileObject != NULL && Data->Iopb->MajorFunction == IRP_MJ_CREATE) {
+		if (FileObject != NULL && Data->Iopb->MajorFunction == IRP_MJ_WRITE) {
 			processName.Length = 0;
 			processName.MaximumLength = NTSTRSAFE_UNICODE_STRING_MAX_CCH * sizeof(WCHAR);
 			processName.Buffer = CreateBuffer(processName.MaximumLength);
@@ -196,6 +209,17 @@ FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
 				return FLT_PREOP_SUCCESS_NO_CALLBACK;
 			}
 			DEBUG_PRINT("Process name: %wZ; File name: %wZ", processName, FileObject->FileName);
+
+            if (IsFileProtected(&FileObject->FileName)) {
+                //DEBUG_PRINT("PROTECTEEEEEEEEEED!");
+                // Need to check process from white list
+
+                //--------------------------------------
+
+                // Deny access to write data into file
+                Data->IoStatus.Status = STATUS_ACCESS_DENIED;
+                return FLT_PREOP_COMPLETE;
+            }
 
             ExFreePoolWithTag(processName.Buffer, MY_POOL_TAG);
 		}
