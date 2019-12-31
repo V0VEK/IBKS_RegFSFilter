@@ -1,5 +1,6 @@
 // Unreferenced formal parameter
 #pragma warning(disable:4100)
+// Dereferencing NULL pointer in ZwQueryInformationProcess
 #pragma warning(disable:6011)
 
 #include <fltKernel.h>
