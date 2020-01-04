@@ -26,6 +26,9 @@ int ConnectToCOM() {
 int ReadMessagesFromCOM() {
 	HRESULT res;
 	unsigned char* buffer = (unsigned char*)malloc(COM_BUFFER_SIZE);
+	if (buffer == 0) {
+		return -1;
+	}
 	memset(buffer, NULL, COM_BUFFER_SIZE);
 
 	while (1) {
