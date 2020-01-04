@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.902
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IBKS_RegFSFilter", "IBKS_RegFSFilter\IBKS_RegFSFilter.vcxproj", "{578F2D8C-8316-4FCD-98E6-2B21FC0FF9C6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "COM_Connector", "COM_Connector\COM_Connector.vcxproj", "{8C8F64B6-E474-4340-8CEF-7C47F797122E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,18 @@ Global
 		{578F2D8C-8316-4FCD-98E6-2B21FC0FF9C6}.Release|x86.ActiveCfg = Release|Win32
 		{578F2D8C-8316-4FCD-98E6-2B21FC0FF9C6}.Release|x86.Build.0 = Release|Win32
 		{578F2D8C-8316-4FCD-98E6-2B21FC0FF9C6}.Release|x86.Deploy.0 = Release|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Debug|ARM.ActiveCfg = Debug|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Debug|ARM64.ActiveCfg = Debug|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Debug|x64.ActiveCfg = Debug|x64
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Debug|x64.Build.0 = Debug|x64
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Debug|x86.ActiveCfg = Debug|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Debug|x86.Build.0 = Debug|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Release|ARM.ActiveCfg = Release|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Release|ARM64.ActiveCfg = Release|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Release|x64.ActiveCfg = Release|x64
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Release|x64.Build.0 = Release|x64
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Release|x86.ActiveCfg = Release|Win32
+		{8C8F64B6-E474-4340-8CEF-7C47F797122E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
