@@ -18,10 +18,6 @@ VOID DriverUnload(PDRIVER_OBJECT p_driver_object)
 
 	DeleteProtectedEntitiesList();
 	NTSTATUS status;
-	/*NTSTATUS status = FsFilterStop();
-	if (!NT_SUCCESS(status)) {
-		DEBUG_PRINT("FS filter stop failure");
-	}*/
 
 	status = RegFilterStop();
 	if (!NT_SUCCESS(status)) {
