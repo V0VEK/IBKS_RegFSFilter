@@ -5,6 +5,7 @@
 
 #include "RegFilter.h"
 
+// https://lordjeb.com/2014/01/14/registry-filter-drivers-part-1/
 NTSTATUS RfRegistryCallback(__in PVOID CallbackContext, __in PVOID Argument1, __in PVOID Argument2);
 LARGE_INTEGER g_CmCookie = { 0 };
 
