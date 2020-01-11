@@ -6,6 +6,7 @@
 #include <fltKernel.h>
 
 #include "FsFilter.h"
+#include "CurrentTime.h"
 
 
 PFLT_FILTER g_FSFilterHandle = NULL;
@@ -43,12 +44,40 @@ const FLT_REGISTRATION fsFilterRegistrationTable = {
 };
 
 
+NTSTATUS FSFilterCOMPortConnect(PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID Context, ULONG Size, PVOID ConnectionCookie);
+VOID FSFilterCOMPortDisconnect(PVOID ConnectionCookie);
+NTSTATUS FSFilterMessageNotifier(PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PULONG RetLength);
+
 NTSTATUS FsFilterStart(PDRIVER_OBJECT p_driver_object) {
+
+    PSECURITY_DESCRIPTOR sd;
+    OBJECT_ATTRIBUTES oa = { 0 };
+    UNICODE_STRING name = COMM_PORT_NAME_FS;
+
+    g_ClientPort_FS = NULL;
+    g_Port_FS = NULL;
 
 	NTSTATUS status = FltRegisterFilter(p_driver_object, &fsFilterRegistrationTable, &g_FSFilterHandle);
 	if (!NT_SUCCESS(status)) {
 		return status;
 	}
+
+   status = FltBuildDefaultSecurityDescriptor(&sd, FLT_PORT_ALL_ACCESS);
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+    DEBUG_PRINT("FltBuildDefaultSecurityDescriptor SUCCESS!");
+    
+    InitializeObjectAttributes(&oa, &name, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, sd);
+
+    status = FltCreateCommunicationPort(g_FSFilterHandle, &g_Port_FS, &oa, NULL, FSFilterCOMPortConnect, FSFilterCOMPortDisconnect, FSFilterMessageNotifier, 1);
+    FltFreeSecurityDescriptor(sd);
+    if (!NT_SUCCESS(status)) {
+        FltUnregisterFilter(g_FSFilterHandle);
+        return status;
+    }
+
+    DEBUG_PRINT("Communication port created!");
 
 	status = FltStartFiltering(g_FSFilterHandle);
 	if (!NT_SUCCESS(status)) {
@@ -63,9 +92,32 @@ NTSTATUS FsFilterStart(PDRIVER_OBJECT p_driver_object) {
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS FSFilterCOMPortConnect(PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID Context, ULONG Size, PVOID ConnectionCookie) {
+    g_ClientPort_FS = ClientPort;
+    DEBUG_PRINT("[+] Client has connected");
+
+    return STATUS_SUCCESS;
+}
+
+
+VOID FSFilterCOMPortDisconnect(PVOID ConnectionCookie) {
+    DEBUG_PRINT("[+] Client has disconnected");
+    FltCloseClientPort(g_FSFilterHandle, &g_ClientPort_FS);
+}
+
+
+NTSTATUS FSFilterMessageNotifier(PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PULONG RetLength) {
+    unsigned char* message = (unsigned char*)InputBuffer;
+    DEBUG_PRINT("Message from user mode: %s", message);
+
+    return STATUS_SUCCESS;
+}
+
 
 NTSTATUS FsFilterStop(FLT_FILTER_UNLOAD_FLAGS Flags) {
 	DEBUG_PRINT("Before stop");
+    FltCloseCommunicationPort(g_Port_FS);
+    DEBUG_PRINT("Communication port closed!");
 	FltUnregisterFilter(g_FSFilterHandle);
 	DEBUG_PRINT("Filesystem filter stop successfull!");
 	return STATUS_SUCCESS;
@@ -210,6 +262,16 @@ FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
 				return FLT_PREOP_SUCCESS_NO_CALLBACK;
 			}
 			DEBUG_PRINT("Process name: %wZ; File name: %wZ", processName, FileObject->FileName);
+
+            WCHAR timeStamp[TIMESTAMP_LENGTH] = { 0 };
+            status = GetCurrentTime((PWCHAR)&timeStamp);
+            if (!NT_SUCCESS(status)) {
+                DEBUG_PRINT("GetCurrentTime ERROR!");
+                return status;
+            }
+
+            DEBUG_PRINT("%ws", timeStamp);
+            FltSendMessage(g_FSFilterHandle, &g_ClientPort_FS, &timeStamp, TIMESTAMP_LENGTH * sizeof(WCHAR), NULL, NULL, NULL);
 
             if (IsFileProtected(&FileObject->FileName)) {
                 //DEBUG_PRINT("PROTECTEEEEEEEEEED!");

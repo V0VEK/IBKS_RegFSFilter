@@ -38,6 +38,11 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT p_driver_object, PUNICODE_STRING p_registry_
 
 	NTSTATUS status = ReadProtectedEntitiesList();
 
+	if (!NT_SUCCESS(status)) {
+		DEBUG_PRINT("ReadProtectedEntitiesList ERROR!");
+		return status;
+	}
+
 	status = FsFilterStart(p_driver_object);
 	if (!NT_SUCCESS(status)) {
 		DEBUG_PRINT("FS filter start failure");
