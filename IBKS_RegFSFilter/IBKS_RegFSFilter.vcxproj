@@ -198,6 +198,7 @@
   <ItemGroup>
     <ClInclude Include="Common.h" />
     <ClInclude Include="ConfigParser.h" />
+    <ClInclude Include="CurrentTime.h" />
     <ClInclude Include="FsFilter.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="RegFilter.h" />
