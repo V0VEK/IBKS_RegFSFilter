@@ -21,6 +21,108 @@ typedef struct DATA_RECEIVE {
 } DATA_RECEIVE;
 
 
+// https://stackoverflow.com/questions/127124/resolve-windows-device-path-to-drive-letter
+int DeviceNameToVolumePathName(WCHAR* filepath) {
+    WCHAR fileDevName[MAX_PATH];
+    WCHAR devName[MAX_PATH];
+    WCHAR fileName[MAX_PATH];
+    HANDLE FindHandle = INVALID_HANDLE_VALUE;
+    WCHAR  VolumeName[MAX_PATH];
+    DWORD  Error = ERROR_SUCCESS;
+    size_t Index = 0;
+    DWORD  CharCount = MAX_PATH + 1;
+
+    int index = 0;
+    // \Device\HarddiskVolume1\windows,locate \windows.
+    for (int i = 0; i < lstrlenW(filepath); i++) {
+        if (!memcmp(&filepath[i], L"\\", 2)) {
+            index++;
+            if (index == 3) {
+                index = i;
+                break;
+            }
+        }
+    }
+    filepath[index] = L'\0';
+
+    memcpy(fileDevName, filepath, ((unsigned long long)index + (unsigned long long)1) * sizeof(WCHAR));
+
+    FindHandle = FindFirstVolumeW(VolumeName, ARRAYSIZE(VolumeName));
+
+    if (FindHandle == INVALID_HANDLE_VALUE)
+    {
+        Error = GetLastError();
+        wprintf(L"FindFirstVolumeW failed with error code %d\n", Error);
+        return FALSE;
+    }
+    for (;;)
+    {
+        //  Skip the \\?\ prefix and remove the trailing backslash.
+        Index = wcslen(VolumeName) - 1;
+
+        if (VolumeName[0] != L'\\' ||
+            VolumeName[1] != L'\\' ||
+            VolumeName[2] != L'?' ||
+            VolumeName[3] != L'\\' ||
+            VolumeName[Index] != L'\\')
+        {
+            Error = ERROR_BAD_PATHNAME;
+            wprintf(L"FindFirstVolumeW/FindNextVolumeW returned a bad path: %s\n", VolumeName);
+            break;
+        }
+        VolumeName[Index] = L'\0';
+        CharCount = QueryDosDeviceW(&VolumeName[4], devName, 100);
+        if (CharCount == 0)
+        {
+            Error = GetLastError();
+            wprintf(L"QueryDosDeviceW failed with error code %d\n", Error);
+            break;
+        }
+        if (!lstrcmpW(devName, filepath)) {
+            VolumeName[Index] = L'\\';
+            Error = GetVolumePathNamesForVolumeNameW(VolumeName, fileName, CharCount, &CharCount);
+            if (!Error) {
+                Error = GetLastError();
+                wprintf(L"GetVolumePathNamesForVolumeNameW failed with error code %d\n", Error);
+                break;
+            }
+
+            // concat drive letter to path
+            lstrcatW(fileName, &filepath[index + 1]);
+            lstrcpyW(filepath, fileName);
+
+            Error = ERROR_SUCCESS;
+            break;
+        }
+
+        Error = FindNextVolumeW(FindHandle, VolumeName, ARRAYSIZE(VolumeName));
+
+        if (!Error)
+        {
+            Error = GetLastError();
+
+            if (Error != ERROR_NO_MORE_FILES)
+            {
+                wprintf(L"FindNextVolumeW failed with error code %d\n", Error);
+                break;
+            }
+
+            //
+            //  Finished iterating
+            //  through all the volumes.
+            Error = ERROR_BAD_PATHNAME;
+            break;
+        }
+    }
+
+    FindVolumeClose(FindHandle);
+    if (Error != ERROR_SUCCESS)
+        return FALSE;
+    return TRUE;
+
+}
+
+
 int ConnectToCOM() {
 
 	HRESULT res;
@@ -93,6 +195,7 @@ DWORD WINAPI ReadMessagesFromREGCOM() {
 
 
 int main() {
+
 
 	g_hPort_FS = NULL;
 	g_hPort_REG = NULL;

@@ -254,14 +254,24 @@ FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
 			if (processName.Buffer == NULL) {
 				return FLT_PREOP_SUCCESS_NO_CALLBACK;
 			}
-			
+
 			status = GetProcessImageName(&processName);
 
 			if (!NT_SUCCESS(status)) {
 				ExFreePoolWithTag(processName.Buffer, MY_POOL_TAG);
 				return FLT_PREOP_SUCCESS_NO_CALLBACK;
 			}
+            
 			DEBUG_PRINT("Process name: %wZ; File name: %wZ", processName, FileObject->FileName);
+
+            POBJECT_NAME_INFORMATION deviceName = NULL;
+            status = IoQueryFileDosDeviceName(FileObject, &deviceName);
+            if (!NT_SUCCESS(status)) {
+                DEBUG_PRINT("IoQueryFileDosDeviceName ERROR!");
+                return status;
+            }
+
+            DEBUG_PRINT("Device name: %wZ", deviceName->Name);
 
             WCHAR timeStamp[TIMESTAMP_LENGTH] = { 0 };
             status = GetCurrentTime((PWCHAR)&timeStamp);
@@ -273,7 +283,7 @@ FLT_PREOP_CALLBACK_STATUS PreFileOperationCallback(
             DEBUG_PRINT("%ws", timeStamp);
             FltSendMessage(g_FSFilterHandle, &g_ClientPort_FS, &timeStamp, TIMESTAMP_LENGTH * sizeof(WCHAR), NULL, NULL, NULL);
 
-            if (IsFileProtected(&FileObject->FileName)) {
+            if (IsFileProtected(&deviceName->Name)) {
                 //DEBUG_PRINT("PROTECTEEEEEEEEEED!");
                 // Need to check process from white list
 
