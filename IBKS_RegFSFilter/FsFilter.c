@@ -36,7 +36,7 @@ FLT_PREOP_CALLBACK_STATUS PreSetInformationFileOperationCallback(
 // https://docs.microsoft.com/ru-ru/windows-hardware/drivers/ddi/fltkernel/ns-fltkernel-_flt_operation_registration
 const FLT_OPERATION_REGISTRATION fsFilterCallbacks[] = {
 	{IRP_MJ_WRITE, 0, PreWriteFileOperationCallback, NULL},
-    {IRP_MJ_CREATE, 0, PreCreateFileOperationCallback, NULL},
+    //{IRP_MJ_CREATE, 0, PreCreateFileOperationCallback, NULL},
     {IRP_MJ_SET_INFORMATION, 0, PreSetInformationFileOperationCallback, NULL},
 	{IRP_MJ_OPERATION_END}
 };
@@ -263,7 +263,7 @@ FLT_PREOP_CALLBACK_STATUS PreWriteFileOperationCallback(
 
 	if (FltObjects->FileObject != NULL && Data != NULL) {
 		FileObject = Data->Iopb->TargetFileObject;
-		if (FileObject != NULL) { // && Data->Iopb->MajorFunction == IRP_MJ_WRITE
+		if (FileObject != NULL && Data->Iopb->MajorFunction == IRP_MJ_WRITE) {
 			processName.Length = 0;
 			processName.MaximumLength = NTSTRSAFE_UNICODE_STRING_MAX_CCH * sizeof(WCHAR);
 			processName.Buffer = CreateBuffer(processName.MaximumLength);
@@ -278,7 +278,7 @@ FLT_PREOP_CALLBACK_STATUS PreWriteFileOperationCallback(
 				return FLT_PREOP_SUCCESS_NO_CALLBACK;
 			}
             
-			DEBUG_PRINT("Process name: %wZ; File name: %wZ", processName, FileObject->FileName);
+			//DEBUG_PRINT("Process name: %wZ; File name: %wZ", processName, FileObject->FileName);
 
             POBJECT_NAME_INFORMATION deviceName = NULL;
             status = IoQueryFileDosDeviceName(FileObject, &deviceName);
@@ -287,7 +287,7 @@ FLT_PREOP_CALLBACK_STATUS PreWriteFileOperationCallback(
                 return status;
             }
 
-            DEBUG_PRINT("Device name: %wZ", deviceName->Name);
+            //DEBUG_PRINT("Device name: %wZ", deviceName->Name);
 
             WCHAR timeStamp[TIMESTAMP_LENGTH] = { 0 };
             status = GetCurrentTime((PWCHAR)&timeStamp);
@@ -296,7 +296,7 @@ FLT_PREOP_CALLBACK_STATUS PreWriteFileOperationCallback(
                 return status;
             }
 
-            DEBUG_PRINT("%ws", timeStamp);
+            //DEBUG_PRINT("%ws", timeStamp);
             FltSendMessage(g_FSFilterHandle, &g_ClientPort_FS, &timeStamp, TIMESTAMP_LENGTH * sizeof(WCHAR), NULL, NULL, NULL);
 
             if (IsFileProtected(&deviceName->Name)) {
@@ -322,6 +322,56 @@ FLT_PREOP_CALLBACK_STATUS PreCreateFileOperationCallback(
     PCFLT_RELATED_OBJECTS FltObjects,
     PVOID* CompletionContext
 ) {
+    //NTSTATUS status;
+    //PFILE_OBJECT FileObject;
+
+    //if (FLT_IS_FS_FILTER_OPERATION(Data))
+    //{
+    //    return FLT_PREOP_SUCCESS_NO_CALLBACK;
+    //}
+
+    //if (FltObjects->FileObject != NULL && Data != NULL) {
+    //    FileObject = Data->Iopb->TargetFileObject;
+    //    if (FileObject != NULL && Data->Iopb->MajorFunction == IRP_MJ_CREATE) {
+
+    //        UNICODE_STRING volumeLetter;
+    //        IoVolumeDeviceToDosName(FileObject->DeviceObject, &volumeLetter);            
+    //        WCHAR fullFilePath[1000] = { 0 };
+    //        RtlStringCbPrintfW(fullFilePath, 1000 * sizeof(WCHAR), L"%ws%ws", volumeLetter.Buffer, FileObject->FileName.Buffer);
+    //        UNICODE_STRING fullPathUnicode;
+    //        RtlInitUnicodeString(&fullPathUnicode, fullFilePath);
+    //        //DEBUG_PRINT("CHEEEEEECK: %wZ", fullPathUnicode);
+
+    //        WCHAR timeStamp[TIMESTAMP_LENGTH] = { 0 };
+    //        status = GetCurrentTime((PWCHAR)&timeStamp);
+    //        if (!NT_SUCCESS(status)) {
+    //            DEBUG_PRINT("GetCurrentTime ERROR!");
+    //            return status;
+    //        }
+
+    //        //DEBUG_PRINT("MJ_CREATE %ws", timeStamp);
+    //        FltSendMessage(g_FSFilterHandle, &g_ClientPort_FS, &timeStamp, TIMESTAMP_LENGTH * sizeof(WCHAR), NULL, NULL, NULL);
+
+    //        if (IsFileProtected(&fullPathUnicode)) {
+    //            //DEBUG_PRINT("PROTEEEECTED by MJ_CREATE!");
+
+    //            Data->IoStatus.Status = STATUS_ACCESS_DENIED;
+    //            return FLT_PREOP_COMPLETE;
+    //        }
+
+    //    }
+    //}
+    return FLT_PREOP_SUCCESS_NO_CALLBACK;
+}
+
+
+
+
+FLT_PREOP_CALLBACK_STATUS PreSetInformationFileOperationCallback(
+    PFLT_CALLBACK_DATA Data,
+    PCFLT_RELATED_OBJECTS FltObjects,
+    PVOID* CompletionContext
+) {
     NTSTATUS status;
     PFILE_OBJECT FileObject;
 
@@ -332,10 +382,10 @@ FLT_PREOP_CALLBACK_STATUS PreCreateFileOperationCallback(
 
     if (FltObjects->FileObject != NULL && Data != NULL) {
         FileObject = Data->Iopb->TargetFileObject;
-        if (FileObject != NULL && Data->Iopb->MajorFunction == IRP_MJ_CREATE) {
+        if (FileObject != NULL && Data->Iopb->MajorFunction == IRP_MJ_SET_INFORMATION) {
 
             UNICODE_STRING volumeLetter;
-            IoVolumeDeviceToDosName(FileObject->DeviceObject, &volumeLetter);            
+            IoVolumeDeviceToDosName(FileObject->DeviceObject, &volumeLetter);
             WCHAR fullFilePath[1000] = { 0 };
             RtlStringCbPrintfW(fullFilePath, 1000 * sizeof(WCHAR), L"%ws%ws", volumeLetter.Buffer, FileObject->FileName.Buffer);
             UNICODE_STRING fullPathUnicode;
@@ -353,7 +403,7 @@ FLT_PREOP_CALLBACK_STATUS PreCreateFileOperationCallback(
             FltSendMessage(g_FSFilterHandle, &g_ClientPort_FS, &timeStamp, TIMESTAMP_LENGTH * sizeof(WCHAR), NULL, NULL, NULL);
 
             if (IsFileProtected(&fullPathUnicode)) {
-                DEBUG_PRINT("PROTEEEECTED by MJ_CREATE!");
+                DEBUG_PRINT("PROTEEEECTED by MJ_SET_INFORMATION!");
 
                 Data->IoStatus.Status = STATUS_ACCESS_DENIED;
                 return FLT_PREOP_COMPLETE;
@@ -361,15 +411,5 @@ FLT_PREOP_CALLBACK_STATUS PreCreateFileOperationCallback(
 
         }
     }
-    return FLT_PREOP_SUCCESS_NO_CALLBACK;
-}
-
-
-FLT_PREOP_CALLBACK_STATUS PreSetInformationFileOperationCallback(
-    PFLT_CALLBACK_DATA Data,
-    PCFLT_RELATED_OBJECTS FltObjects,
-    PVOID* CompletionContext
-) {
-
     return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
